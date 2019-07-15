@@ -26,13 +26,24 @@ using namespace SML::Mod;
 using namespace SML::Objects;
 
 // Version of SML that this mod was compiled for.
-#define SML_VERSION "1.0.0-pr5"
+#define SML_VERSION "1.0.0-pr6"
 
 // define the mod name for easy changing and simple use
 #define MOD_NAME "ExampleMod"
 
-// Define a log macro to make outputting to the log easier
+// Define logging macros to make outputting to the log easier
+
+//log an informational message to the console
 #define LOG(msg) SML::Utility::infoMod(MOD_NAME, msg)
+
+//log an informational message to the console
+#define INFO(msg) LOG(msg)
+
+//log a warning message to the console
+#define WARN(msg) SML::Utility::warningMod(MOD_NAME, msg)
+
+//log an error message to the console
+#define ERR(msg) SML::Utility::errorMod(MOD_NAME, msg)
 
 // Config
 json config = SML::Utility::JsonConfig::load(MOD_NAME, {
@@ -66,7 +77,7 @@ Mod::Info modInfo {
 	MOD_NAME,
 
 	// Version
-	"0.2",
+	"1.0.0",
 
 	// Description
 	"A basic mod created to showcase SML's functionality.",
@@ -92,7 +103,7 @@ class ExampleMod : public Mod {
 	}
 
 public:
-	// Constructor for SML usage, do not rename!
+	// Constructor for SML usage. Do not put anything in here, use setup() instead.
 	ExampleMod() : Mod(modInfo) {
 	}
 
@@ -106,11 +117,11 @@ public:
 		// More on namespaces:
 		// * The functions that will be of use to you are in the SML::Mods::Functions namespace. A tip is to type Functions:: and see what functions are available for you to use. 
 
-		// Use a member function as handler
+		// Hook a member function as handler
 		::subscribe<&AFGPlayerController::BeginPlay>(std::bind(&ExampleMod::beginPlay, this, _1, _2)); //bind the beginPlay function, with placeholder variables
 		// Because there are two inputs to the function, we use _1 and _2. If there were 3 inputs, we would use _1, _2, and _3, and so forth.
 
-		// Use a lambda with captured this-ptr as handler
+		// Hook a lambda with captured this-ptr as handler
 		::subscribe<&PlayerInput::InputKey>([this](Functions::ModReturns* modReturns, PlayerInput* playerInput, FKey key, InputEvent event, float amount, bool gamePad) {
 			if(GetAsyncKeyState('G')) {
 				LOG("G key pressed");
@@ -133,11 +144,13 @@ public:
 			// If you abuse this, I will find you, and I will... uh... do something... and you won't like it
 			//LOG("test");
 		});
+
+		
 		
 		//Here, we do some registring. Registring must be done in setup to make sure that the registration will be available for later use.
 
 		// Register /kill to call the killPlayer function
-		Functions::registerCommand("kill", killPlayer); //functions registered like this must exist outside of the class
+		Functions::registerCommand("kill", killPlayer); //functions registered like this must exist outside of the class or be static members of the class
 
 		// Register killPlayer as a function that other mods can use if this mod is loaded.
 		Functions::registerAPIFunction("KillPlayer", killPlayer);

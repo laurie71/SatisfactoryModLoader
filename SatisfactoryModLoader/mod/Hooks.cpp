@@ -17,6 +17,25 @@ using namespace std::placeholders;
 
 namespace SML {
 	namespace Mod {
+
+		//Major major props to Brabb3l for helping me figure this peice of shit code out
+		class LambdaFunctionHooks {
+		public:
+			void hookLambdas() {
+				::subscribe<&Objects::AFGPlayerController::EnterChatMessage>([this](Functions::ModReturns* modReturns, Objects::AFGPlayerController* player, Objects::FString* message) {
+					Hooks::playerSentMessage(modReturns, player, message);
+				});
+
+				::subscribe<&Objects::FEngineLoop::Init>([this](Functions::ModReturns* ret, Objects::FEngineLoop* engineLoop) {
+					Hooks::engineInit(ret, engineLoop);
+				});
+
+				//::subscribe<&Objects::FPakPrecacher::DoSignatureCheck>([this](Functions::ModReturns* ret, Objects::FPakPrecacher* pak, bool b, Objects::IAsyncReadRequest* request, int i) {
+					//ret->useOriginalFunction = false;
+				//});
+			}
+		};
+
 		PVOID Hooks::chatFunc;
 		PVOID Hooks::worldFunc;
 		PVOID Hooks::playerAddedFunc;
@@ -29,37 +48,17 @@ namespace SML {
 			DetourTransactionBegin();
 			DetourUpdateThread(GetCurrentThread());
 
-			// find the function by name
-			chatFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "AFGPlayerController::EnterChatMessage");
-			DetourAttach(&(PVOID&)chatFunc, playerSentMessage);
-
-			worldFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "ULevel::PostLoad");
-			DetourAttach(&(PVOID&)worldFunc, getWorld);
-
-			playerAddedFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "AFGGameState::NotifyPlayerAdded");
-			DetourAttach(&(PVOID&)playerAddedFunc, playerAdded);
-
-			engineInitFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "FEngineLoop::Init");
-			DetourAttach(&(PVOID&)engineInitFunc, engineInit);
-
-			playerControllerAddedFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "AFGPlayerController::PostLoad");
-			DetourAttach(&(PVOID&)playerControllerAddedFunc, playerControllerAdded);
+			LambdaFunctionHooks().hookLambdas();
 
 			levelDestroyFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "ULevel::~ULevel");
 			DetourAttach(&(PVOID&)levelDestroyFunc, levelDestructor);
-
-			sigCheckFunc = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "FPakPrecacher::DoSignatureCheck");
-			DetourAttach(&(PVOID&)sigCheckFunc, sigCheck);
 
 			Utility::info("Installed hooks!");
 
 			DetourTransactionCommit();
 		}
 
-		void Hooks::sigCheck(void* self, bool b, void* v) {
-
-		}
-
+		/*
 		void Hooks::playerControllerAdded(SDK::AFGPlayerController* controller) {
 			if (Assets::SinglePlayerController == nullptr) {
 				Assets::SinglePlayerController = controller;
@@ -67,7 +66,7 @@ namespace SML {
 
 			auto pointer = (void(WINAPI*)(void*))playerControllerAddedFunc;
 			pointer(controller);
-		}
+		}*/
 
 		void Hooks::levelDestructor(SDK::ULevel* level) {
 
@@ -77,21 +76,22 @@ namespace SML {
 			pointer(level);
 		}
 
-		void Hooks::engineInit(void* engine) {
+		void Hooks::engineInit(Functions::ModReturns* ret, Objects::FEngineLoop* engine) {
 			//caching of assets
 			modHandler.currentStage = GameStage::RUN;
-			for (std::pair< const wchar_t*, SDK::UObject*> asset : modHandler.assetCache) {
+			for (std::pair<const wchar_t*, SDK::UObject*> asset : modHandler.assetCache) {
 				modHandler.assetCache[asset.first] = Assets::AssetLoader::loadObjectSimple(SDK::UClass::StaticClass(), asset.first);
 			}
 
+			//load delayed coremods
 			for (const wchar_t* dll : delayedCoremods) {
 				LoadLibraryW(dll);
 			}
 
-			auto pointer = (void(WINAPI*)(void*))engineInitFunc;
-			pointer(engine);
+			ret->useOriginalFunction = true;
 		}
 
+		/*
 		void Hooks::playerAdded(SDK::AFGGameState* gameState, SDK::AFGCharacterPlayer* player) {
 			auto pointer = (void(WINAPI*)(void*, void*))playerAddedFunc;
 			//Utility::info("Player Added: ", player->GetName(), " - Controlled: ", player->IsControlled(), " - IsLocallyControlled: ", player->IsLocallyControlled());
@@ -100,22 +100,12 @@ namespace SML {
 			}
 			pointer(gameState, player);
 		}
-
-		void Hooks::getWorld(void* self) {
-			auto pointer = (void(WINAPI*)(void*))worldFunc;
-			pointer(self);
-			/*
-			PVOID getWorldRaw = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "ULevel::GetWorld");
-			auto getWorld = (void*(WINAPI*)(void*))getWorldRaw;
-			Assets::CurrentWorld = getWorld(self);
-			*/
-			Assets::CurrentWorld = SDK::UWorld::GWorld;
-		}
+		*/
 
 		// parse commands when the player sends a message
-		void Hooks::playerSentMessage(void* player, SDK::FString* message) {
+		void Hooks::playerSentMessage(Functions::ModReturns* ret, Objects::AFGPlayerController* player, Objects::FString* messageIn) {
 
-			auto pointer = (void(WINAPI*)(void*, void*))chatFunc;
+			SDK::FString* message = reinterpret_cast<SDK::FString*>(messageIn);
 
 			std::string str = message->ToString();
 			Utility::info(str);
@@ -148,10 +138,7 @@ namespace SML {
 					found = true;
 				}
 			}
-			if (!found) {
-				pointer(player, message);
-			}
-
+			ret->useOriginalFunction = !found;
 		}
 
 		bool Hooks::smlCommands(Functions::CommandData data) {

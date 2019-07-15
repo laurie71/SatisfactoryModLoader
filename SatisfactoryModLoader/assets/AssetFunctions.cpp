@@ -9,6 +9,7 @@
 #include <Lib.h>
 #include "FObjectSpawnParameters.h"
 #include <SatisfactoryModLoader.h>
+#include <mod/MathFunctions.h>
 #include <util/Utility.h>
 #include <util/FString.h>
 
@@ -20,13 +21,17 @@ namespace SML {
 	}
 	namespace Mod {
 		namespace Functions {
-			SML_API SDK::UObject* loadObjectFromPak(SDK::UClass *ObjectClass, const wchar_t *InName) {
+			SML_API SDK::UObject* loadObjectFromPak(SDK::UClass* ObjectClass, const wchar_t *InName) {
 				return Assets::AssetLoader::loadObjectSimple(ObjectClass, InName);
 			}
 
-			SML_API void* spawnActor(void* UWorld, void* *UClass, void* *FVector, void* *FRotator, void* *FActorSpawnParameters) {
+			SML_API SDK::UObject* loadObjectFromPak(const wchar_t *InName) {
+				return Assets::AssetLoader::loadObjectSimple(SDK::UClass::StaticClass(), InName);
+			}
+
+			SML_API SDK::UClass* spawnActor(void* UWorld, void* *UClass, void* *FVector, void* *FRotator, void* *FActorSpawnParameters) {
 				PVOID spawnActorFn = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "UWorld::SpawnActor");
-				auto spawnActorFunc = (SDK::UClass * (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
+				auto spawnActorFunc = (SDK::UClass* (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
 				return spawnActorFunc(UWorld, UClass, &FVector, &FRotator, &FActorSpawnParameters);
 			}
 
@@ -42,7 +47,7 @@ namespace SML {
 				return reinterpret_cast<SDK::AFGPlayerController*>(SDK::UWorld::GetWorld()->OwningGameInstance->LocalPlayers[0]->PlayerController);
 			}
 
-			SML_API void spawnActorAtPlayer(SDK::UObject* obj, float x, float y, float z) {
+			SML_API SDK::UClass* spawnActorAtPlayer(SDK::UObject* obj, float x, float y, float z) {
 				FActorSpawnParameters params = FActorSpawnParameters();
 				auto myPlayer = getPlayerCharacter();
 				auto buildingLocation = myPlayer->K2_GetActorLocation();
@@ -51,37 +56,39 @@ namespace SML {
 				buildingLocation.X += x;
 				buildingLocation.Y += y;
 				PVOID spawnActorFn = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "UWorld::SpawnActor");
-				auto spawnActor = (SDK::UClass * (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
-				spawnActor(getWorld(), obj, &buildingLocation, &buildingRotation, &params);
+				auto spawnActor = (SDK::UClass* (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
+				return spawnActor(getWorld(), obj, &buildingLocation, &buildingRotation, &params);
 			}
 
-			SML_API void spawnActorAtPlayer(SDK::UObject* obj) {
-				spawnActorAtPlayer(obj, 0, 0, 0);
+			SML_API SDK::UClass* spawnActorAtPlayer(SDK::UObject* obj) {
+				return spawnActorAtPlayer(obj, 0, 0, 0);
 			}
 
-			SML_API void spawnActor(SDK::UObject* obj, float x, float y, float z, float pitch, float roll, float yaw) {
+			SML_API SDK::UClass* spawnActor(SDK::UObject* obj, float x, float y, float z, float pitch, float roll, float yaw) {
 				FActorSpawnParameters params = FActorSpawnParameters();
-				SDK::FVector vec = SDK::FVector();
-				vec.X = x;
-				vec.Y = y;
-				vec.Z = z;
-				SDK::FRotator rot = SDK::FRotator();
-				rot.Pitch = pitch;
-				rot.Roll = roll;
-				rot.Yaw = yaw;
+				SDK::FVector vec = Functions::makeVector(x, y, z);
+				SDK::FRotator rot = Functions::makeRotator(pitch, roll, yaw);
 				PVOID spawnActorFn = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "UWorld::SpawnActor");
-				auto spawnActor = (SDK::UClass * (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
-				spawnActor(getWorld(), obj, &vec, &rot, &params);
+				auto spawnActor = (SDK::UClass* (WINAPI*)(void*, void*, void*, void*, void*))spawnActorFn;
+				return spawnActor(getWorld(), obj, &vec, &rot, &params);
+			}
+
+			SML_API void addRecipe(const wchar_t* recipeName) {
+				SDK::UClass* recipe = static_cast<SDK::UClass*>(loadObjectFromPak(recipeName));
+				PVOID addAvailableRecipeFn = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "AFGRecipeManager::AddAvailableRecipe");
+				auto addAvailableRecipe = static_cast<SDK::AFGRecipeManager* (WINAPI*)(void*, void*)>(addAvailableRecipeFn);
+				SDK::TSubclassOf<SDK::UFGRecipe> recipeClass(recipe);
+				addAvailableRecipe(static_cast<SDK::AFGGameState*>(getWorld()->GameState)->mRecipeManager, recipe);
 			}
 
 			SML_API void addRecipe(SDK::UClass* recipe) {
 				PVOID addAvailableRecipeFn = DetourFindFunction("FactoryGame-Win64-Shipping.exe", "AFGRecipeManager::AddAvailableRecipe");
 				auto addAvailableRecipe = static_cast<SDK::AFGRecipeManager* (WINAPI*)(void*, void*)>(addAvailableRecipeFn);
 				SDK::TSubclassOf<SDK::UFGRecipe> recipeClass(recipe);
-				addAvailableRecipe(static_cast<SDK::AFGGameState*>(reinterpret_cast<SDK::UWorld*>(getWorld())->GameState)->mRecipeManager, recipe);
+				addAvailableRecipe(static_cast<SDK::AFGGameState*>(getWorld()->GameState)->mRecipeManager, recipe);
 			}
 
-			SML_API SDK::FInventoryStack makeItemStack(SDK::UClass* clazz, const int& amount) {
+			SML_API SDK::FInventoryStack makeItemStack(SDK::UClass* clazz, int amount) {
 				SDK::FInventoryStack stack = SDK::FInventoryStack();
 				SDK::FInventoryItem item = SDK::FInventoryItem();
 

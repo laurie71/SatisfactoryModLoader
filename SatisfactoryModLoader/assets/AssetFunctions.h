@@ -32,12 +32,22 @@ namespace SML {
 			* The asset name must be of the following format: \\Game\\FactoryGame\\Path\\To\\Asset\\AssetFile.AssetFile
 			* If you are loading a blueprint, the name must have a _C appended to the end.
 			*/
-			SML_API SDK::UObject* loadObjectFromPak(SDK::UClass *ObjectClass, const wchar_t *InName);
+			SML_API SDK::UObject* loadObjectFromPak(SDK::UClass *ObjectClass, const wchar_t* InName);
+
+			/**
+			* This function has been largely replaced by the asset caching system. To prevent slowdowns, use that instead!
+			* 
+			* Load an object from a pak file. Will crash if the pak is not installed.
+			*
+			* The asset name must be of the following format: \\Game\\FactoryGame\\Path\\To\\Asset\\AssetFile.AssetFile
+			* If you are loading a blueprint, the name must have a _C appended to the end.
+			*/
+			SML_API SDK::UObject* loadObjectFromPak(const wchar_t* InName);
 
 			/**
 			* Spawns an actor at a given location, when given the world.
 			*/
-			SML_API void* spawnActor(void* UWorld, void* *UClass, void* *FVector, void* *FRotator, void* *FActorSpawnParameters);
+			SML_API SDK::UClass* spawnActor(void* UWorld, void* *UClass, void* *FVector, void* *FRotator, void* *FActorSpawnParameters);
 
 			/**
 			* Get the current global world object.
@@ -57,17 +67,23 @@ namespace SML {
 			/**
 			* Spawn an actor at the player, offset by the XYZ values provided.
 			*/
-			SML_API void spawnActorAtPlayer(SDK::UObject* obj, float x, float y, float z);
+			SML_API SDK::UClass* spawnActorAtPlayer(SDK::UObject* obj, float x, float y, float z);
 
 			/**
 			* Spawn an actor at the player.
 			*/
-			SML_API void spawnActorAtPlayer(SDK::UObject* obj);
+			SML_API SDK::UClass* spawnActorAtPlayer(SDK::UObject* obj);
 
 			/**
 			* Spawn an actor at the provided location with the provided rotation.
 			*/
-			SML_API void spawnActor(SDK::UObject* obj, float x, float y, float z, float pitch, float roll, float yaw);
+			SML_API SDK::UClass* spawnActor(SDK::UObject* obj, float x, float y, float z, float pitch, float roll, float yaw);
+
+			/**
+			* Wrapper for addRecipe(SDK::UClass*) to do everything for you.
+			* Call this in beginPlay().
+			*/
+			SML_API void addRecipe(const wchar_t* recipeName);
 
 			/**
 			* Adds a UFGRecipe to the game.
@@ -79,7 +95,7 @@ namespace SML {
 			* Returns an ItemStack from an item class and an item amount.
 			* Code kindly provided by Trxnce.
 			*/
-			SML_API SDK::FInventoryStack makeItemStack(SDK::UClass* clazz, const int& amount);
+			SML_API SDK::FInventoryStack makeItemStack(SDK::UClass* clazz, int amount);
 
 			/**
 			* Adds an item with an amount to the player's inventory.
