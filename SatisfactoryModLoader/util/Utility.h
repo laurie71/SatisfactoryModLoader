@@ -8,7 +8,7 @@
 
 namespace SML {
 	namespace Utility {
-		static std::ofstream logFile; //
+		static std::ofstream logFile;
 
 		enum LogType {
 			Info,
@@ -37,9 +37,11 @@ namespace SML {
 			White
 		};
 
+		void displayCrash(std::string crashText);
+
 		void SML_API setConsoleColor(ConsoleColor color);
 
-		void SML_API checkVersion(const std::string target[2]);
+		void SML_API checkVersion(const int target);
 
 		void SML_API log();
 

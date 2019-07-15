@@ -1,4 +1,18 @@
-// dllmain.cpp : Defines the entry point for the DLL application.
+/*
+  ____  __  __ _
+ / ___||  \/  | |
+ \___ \| |\/| | |
+  ___) | |  | | |___
+ |____/|_|  |_|_____|
+
+ SatisfactoryModLoader is a tool to load dll mods into satisfactory.
+ To get started with modding, take a look at BaseMod/ExampleMod.cpp.
+ If you have any questions, please contact SuperCoder79 on the modding discord.
+
+ Known issues:
+ * Chat commands don't work
+ * Everything crashes 10000% more than it should
+*/
 #define WIN32_LEAN_AND_MEAN
 #include "../SatisfactorySdk/SDK.hpp"
 #include <stdafx.h>
@@ -15,6 +29,7 @@
 #include <util/Reflection.h>
 #include <util/JsonConfig.h>
 #include <mod/Hooks.h>
+#include <mod/Coremods.h>
 
 namespace SML {
 	static const char* logName = "SatisfactoryModLoader.log";
@@ -23,6 +38,7 @@ namespace SML {
 	// Main DLL for loading mod DLLs
 	void startSML() {
 		// launch the game's internal console and hook into it
+		Utility::logFile.clear();
 		Utility::logFile = std::ofstream(logName, std::ios_base::app);
 		AllocConsole();
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
@@ -54,6 +70,9 @@ namespace SML {
 		// get path
 		char p[MAX_PATH];
 		GetModuleFileNameA(NULL, p, MAX_PATH);
+
+		//load coremods
+		Mod::startLoadingCoremods(p);
 
 		// load mods
 		modHandler.loadMods(p);

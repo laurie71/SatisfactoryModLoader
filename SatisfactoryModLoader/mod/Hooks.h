@@ -6,6 +6,7 @@
 #include <HookLoaderInternal.h>
 #include "ModFunctions.h"
 #include <assets/AssetFunctions.h>
+#include <game/Global.h>
 
 namespace SML {
 	namespace Mod {
@@ -17,21 +18,23 @@ namespace SML {
 			static PVOID playerControllerAddedFunc;
 			static PVOID engineInitFunc;
 			static PVOID levelDestroyFunc;
+			static PVOID sigCheckFunc;
 
 			static void hookFunctions();
 
-			static void engineInit(void* fEngine);
+			static void engineInit(Functions::ModReturns* ret, Objects::FEngineLoop* fEngine);
 
-			static void getWorld(void* self);
+			//static void getWorld(void* self);
 
-			static void playerAdded(SDK::AFGGameState* gameState, SDK::AFGCharacterPlayer* player);
+			//static void playerAdded(SDK::AFGGameState* gameState, SDK::AFGCharacterPlayer* player);
 
-			static void playerControllerAdded(SDK::AFGPlayerController* self);
+			//static void playerControllerAdded(SDK::AFGPlayerController* self);
 
 			static void levelDestructor(SDK::ULevel* level);
 
-			static void playerSentMessage(void* player, SML::Objects::FString* message);
+			static void playerSentMessage(Functions::ModReturns* ret, Objects::AFGPlayerController* player, Objects::FString* message);
 
+			
 			static bool smlCommands(Functions::CommandData data);
 		};
 	}
